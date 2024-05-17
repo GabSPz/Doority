@@ -19,6 +19,7 @@ struct RecordMigration: AsyncMigration {
             .field("access_datetime", .datetime)
             .field("user_id", .uuid, .required, .references(User.schema, "id", onDelete: .cascade, onUpdate: .cascade))
             .field("branch_id", .uuid, .required, .references(Branch.schema, "id", onDelete: .cascade, onUpdate: .cascade))
+            .field("access_id", .uuid, .required, .references(Access.schema, "id", onDelete: .cascade, onUpdate: .cascade))
             .create()
     }
     

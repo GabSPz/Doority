@@ -9,12 +9,12 @@ import Vapor
 
 struct NewUserDTO: Content {
     var name: String
-    var lastName: String
-    var motherName: String
-    var startTime: Date
-    var endTime: Date
-    var numberPhone: String
+    var last_name: String
+    var mother_name: String
+    var start_time: Date
+    var end_time: Date
+    var number_phone: String
     var email: String
     var password: String
-    var coommerceName: String
+    var coommerce_name: String
 }

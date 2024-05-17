@@ -7,7 +7,7 @@
 
 import Vapor
 
-enum AccessType: String {
+enum AccessType: String, Content {
     case qr
     case card
 }

@@ -15,19 +15,19 @@ final class User: ModelContent {
     public struct Public: Content {
         var id: UUID
         var name: String
-        var lastName: String
-        var motherName: String
-        var startTime: Date
-        var endTime: Date
+        var last_name: String
+        var mother_name: String
+        var start_time: Date
+        var end_time: Date
         var role: UserRole
-        var numberPhone: String
+        var number_phone: String
         var email: String
         var coommerce_id: UUID
         var branch: ParentDataDTO?
         var accesses: [Access.Public]
-        var hasAccount: Bool
-        var lastEntry: Date?
-        var lastExit: Date?
+        var has_account: Bool
+        var last_entry: Date?
+        var last_exit: Date?
     }
     
     @ID(key: .id)
@@ -37,22 +37,22 @@ final class User: ModelContent {
     var name: String
     
     @Field(key: "last_name")
-    var lastName: String
+    var last_name: String
     
     @Field(key: "mother_name")
-    var motherName: String
+    var mother_name: String
     
     @Field(key: "start_time")
-    var startTime: Date
+    var start_time: Date
     
     @Field(key: "end_time")
-    var endTime: Date
+    var end_time: Date
     
     @Field(key: "role")
     var role: String
     
     @Field(key: "number_phone")
-    var numberPhone: String
+    var number_phone: String
     
     @Field(key: "email")
     var email: String
@@ -61,13 +61,13 @@ final class User: ModelContent {
     var password: String
     
     @Field(key: "access_token")
-    var accessToken: String?
+    var access_token: String?
     
     @Field(key: "otp_data")
     var otp: OtpData?
     
     @Timestamp(key: "createdAt", on: .create)
-    var createdAt: Date?
+    var created_at: Date?
     
     @Parent(key: "commerce_id")
     var commerce: Commerce
@@ -96,21 +96,23 @@ final class User: ModelContent {
             return .init(id: $branch.id!, name: branch.name)
         }
         
-        return .init(id: id, name: name, lastName: lastName, motherName: motherName, startTime: startTime, endTime: endTime, role: .init(rawValue: role) ?? .customer, numberPhone: numberPhone, email: email, coommerce_id: $commerce.id, branch: parentData, accesses: accesses, hasAccount: !self.password.isEmpty)
+        return .init(id: id, name: name, last_name: last_name, mother_name: mother_name, start_time: start_time, end_time: end_time, role: .init(rawValue: role) ?? .customer, number_phone: number_phone, email: email, coommerce_id: $commerce.id, branch: parentData, accesses: accesses, has_account: !self.password.isEmpty)
     }
     
-    init(id: UUID? = nil, name: String, lastName: String, motherName: String, startTime: Date, endTime: Date, role: String, numberPhone: String, email: String, password: String, createdAt: Date? = nil, commerce: Commerce.IDValue, branch: Branch.IDValue? = nil) {
+    init(id: UUID? = nil, name: String, last_name: String, mother_name: String, start_time: Date, end_time: Date, role: String, number_phone: String, email: String, password: String, access_token: String? = nil, otp: OtpData? = nil, created_at: Date? = nil, commerce: Commerce.IDValue, branch: Branch.IDValue? = nil) {
         self.id = id
         self.name = name
-        self.lastName = lastName
-        self.motherName = motherName
-        self.startTime = startTime
-        self.endTime = endTime
+        self.last_name = last_name
+        self.mother_name = mother_name
+        self.start_time = start_time
+        self.end_time = end_time
         self.role = role
-        self.numberPhone = numberPhone
+        self.number_phone = number_phone
         self.email = email
         self.password = password
-        self.createdAt = createdAt
+        self.access_token = access_token
+        self.otp = otp
+        self.created_at = created_at
         self.$commerce.id = commerce
         if let branch { self.$branch.id = branch }
     }
@@ -118,5 +120,13 @@ final class User: ModelContent {
     init() {
         
     }
-    
+}
+
+extension User: ModelAuthenticatable {
+    static let usernameKey = \User.$email
+    static let passwordHashKey = \User.$password
+
+    func verify(password: String) throws -> Bool {
+        try Bcrypt.verify(password, created: self.password)
+    }
 }

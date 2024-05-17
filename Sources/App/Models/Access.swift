@@ -13,9 +13,9 @@ final class Access: ModelContent {
     static var schema: String = "accesses"
     
     public struct Public: Content {
-        var id: UUID
+        var id: UUID?
         var value: String
-        var type: AccessType.RawValue
+        var type: AccessType
         var user_id: UUID
     }
     
@@ -44,6 +44,7 @@ final class Access: ModelContent {
     
     func toPublic() throws -> Access.Public {
         let id = try id.validModel()
-        return .init(id: id, value: value, type: type, user_id: $user.id)
+        guard let typeFormatted = AccessType(rawValue: type) else { throw AbortDefault.valueNilFromServer(key: "access_type")}
+        return .init(id: id, value: value, type: typeFormatted, user_id: $user.id)
     }
 }

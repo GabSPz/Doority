@@ -18,6 +18,7 @@ struct BranchMigration: AsyncMigration {
             .field("name", .string, .required)
             .field("startTime", .datetime, .required)
             .field("endTime", .datetime, .required)
+            .field("commerce_id", .uuid, .required, .references(Commerce.schema, "id", onDelete: .cascade))
             .create()
         
     }

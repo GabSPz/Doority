@@ -13,10 +13,11 @@ final class Branch: ModelContent {
     static var schema: String = "branches"
     
     public struct Public: Content {
-        var id: UUID
+        var id: UUID?
         var name: String
-        var startTime: Date
-        var endTime: Date
+        var start_time: Date
+        var end_time: Date
+        var commerce_id: UUID?
     }
     
     @ID(key: .id)
@@ -26,10 +27,10 @@ final class Branch: ModelContent {
     var name: String
     
     @Field(key: "startTime")
-    var startTime: Date
+    var start_time: Date
     
     @Field(key: "endTime")
-    var endTime: Date
+    var end_time: Date
     
     @Children(for: \.$branch)
     var employees: [User]
@@ -37,11 +38,15 @@ final class Branch: ModelContent {
     @Children(for: \.$branch)
     var records: [Record]
     
-    init(id: UUID? = nil, name: String, startTime: Date, endTime: Date) {
+    @Parent(key: "commerce_id")
+    var commerce: Commerce
+    
+    init(id: UUID? = nil, name: String, start_time: Date, end_time: Date, commerce_id: Commerce.IDValue) {
         self.id = id
         self.name = name
-        self.startTime = startTime
-        self.endTime = endTime
+        self.start_time = start_time
+        self.end_time = end_time
+        self.$commerce.id = commerce_id
     }
     
     init() {
@@ -51,7 +56,7 @@ final class Branch: ModelContent {
     func toPublic() throws -> Branch.Public {
         let id = try id.validModel()
         
-        return .init(id: id, name: name, startTime: startTime, endTime: endTime)
+        return .init(id: id, name: name, start_time: start_time, end_time: end_time, commerce_id: $commerce.id)
     }
 }
 

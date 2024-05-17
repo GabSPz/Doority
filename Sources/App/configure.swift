@@ -22,6 +22,9 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(UserMigration())
     app.migrations.add(AccessMigration())
     app.migrations.add(RecordMigration())
+    
+    // JWT
+    app.jwt.signers.use(.hs256(key: Environment.get("JWT-KEY") ?? "dev-key"))
 
     // register routes
     try routes(app)

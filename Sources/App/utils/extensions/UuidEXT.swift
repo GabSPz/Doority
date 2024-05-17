@@ -9,7 +9,7 @@ import Fluent
 
 extension UUID? {
     func validModel() throws -> UUID {
-        guard let id = self else { throw AbortDefault.idNotExist }
+        guard let id = self else { throw AbortDefault.idNotExist() }
         return id
     }
 }

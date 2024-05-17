@@ -15,8 +15,8 @@ final class Record: ModelContent {
         var id: UUID
         var user: ParentDataDTO
         var branch: ParentDataDTO
-        var accessDatetime: Date
-        var type: AccessType.RawValue
+        var access_datetime: Date
+        var type: AccessType
         
         
     }
@@ -30,18 +30,21 @@ final class Record: ModelContent {
     @Parent(key: "branch_id")
     var branch: Branch
     
+    @Parent(key: "access_id")
+    var access: Access
+    
     @Timestamp(key: "access_datetime", on: .create)
-    var accessDatetime: Date?
+    var access_datetime: Date?
     
     @Field(key: "type")
-    var type: AccessType.RawValue
+    var type: RecordType.RawValue
     
-    init(id: UUID? = nil, user: User.IDValue, branch: Branch.IDValue, accessDatetime: Date? = nil, type: String) {
+    init(id: UUID? = nil, user: User.IDValue, branch: Branch.IDValue, type: String, access: Access.IDValue) {
         self.id = id
         self.$user.id = user
         self.$branch.id = branch
-        self.accessDatetime = accessDatetime
         self.type = type
+        self.$access.id = access
     }
     
     init() {
@@ -51,8 +54,9 @@ final class Record: ModelContent {
     func toPublic() throws -> Record.Public {
         //Validations
         let id = try id.validModel()
-        guard let accessDatetimeValidated = accessDatetime else { throw AbortDefault.valueNilFromServer(key: "accessDateTime") }
+        guard let accessDatetimeValidated = access_datetime else { throw AbortDefault.valueNilFromServer(key: "record_access_datetime") }
+        guard let typeValidate = AccessType(rawValue: type) else { throw AbortDefault.valueNilFromServer(key: "record_type") }
         
-        return .init(id: id, user: .init(id: $user.id, name: user.name), branch: .init(id: $branch.id, name: branch.name), accessDatetime: accessDatetimeValidated, type: type)
+        return .init(id: id, user: .init(id: $user.id, name: user.name), branch: .init(id: $branch.id, name: branch.name), access_datetime: accessDatetimeValidated, type: typeValidate)
     }
 }

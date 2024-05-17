@@ -26,6 +26,9 @@ final class Commerce: ModelContent {
     @Children(for: \.$commerce)
     var users: [User]
     
+    @Children(for: \.$commerce)
+    var branches: [Branch]
+    
     init() {
         
     }
