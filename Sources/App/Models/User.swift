@@ -84,9 +84,9 @@ final class User: ModelContent {
     ///Only possible if relations Access, Commerce and Branch has been charged into User
     func toPublic() throws -> User.Public {
         //Validating
-        if let branch = branch, branch.name == nil, accesses == nil, commerce.name == nil {
-            throw AbortDefault.valueNilFromServer(key: "(branch, accesses, commerce)")
-        }
+        if let branch = $branch.wrappedValue, branch.$name.value == nil { throw AbortDefault.valueNilFromServer(key: "user_branch_name") }
+        if  self.$accesses.value == nil { throw AbortDefault.valueNilFromServer(key: "user_accesses") }
+        if self.$commerce.wrappedValue.$name.value == nil { throw AbortDefault.valueNilFromServer(key: "user_commerce") }
         
         let id = try id.validModel()
         let accesses: [Access.Public] = try accesses.map { try $0.toPublic() }
@@ -127,6 +127,10 @@ extension User: ModelAuthenticatable {
     static let passwordHashKey = \User.$password
 
     func verify(password: String) throws -> Bool {
-        try Bcrypt.verify(password, created: self.password)
+        if self.password.isEmpty {
+            //The user doesnt have a password, so he cant access for login
+            return false
+        }
+        return try Bcrypt.verify(password, created: self.password)
     }
 }

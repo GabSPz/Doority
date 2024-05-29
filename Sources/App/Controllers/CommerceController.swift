@@ -13,17 +13,18 @@ struct CommerceController: RouteCollection {
         let commerces = routes.grouped("commerces")
         
         commerces.group(":commerceID") { commerce in
-            commerce.put("update", use: updateCommcerce)
+            commerce.put("update", use: updateCommerce)
             commerce.group("branches") { branches in
                 branches.post("add", use: addBranch)
                 branches.get("all",use: getAllBranchesFromCommerce)
                 branches.get(use: getBranch)
             }
+            commerce.delete("delete", use: deleteCommerce)
         }
     }
     
     //PUT :commerceID/update
-    func updateCommcerce(req: Request) async throws -> ModelResponse <Commerce.Public> {
+    func updateCommerce(req: Request) async throws -> ModelResponse <Commerce.Public> {
         let updateCommcerce = try req.content.decode(Commerce.Public.self)
         
         guard let commecerceDB = try await Commerce.find(updateCommcerce.id, on: req.db) else { throw AbortDefault.idNotExist(description: updateCommcerce.id.uuidString) }
@@ -99,4 +100,14 @@ struct CommerceController: RouteCollection {
         return .init(code: 200, description: "Success", body: true)
     }
     
+    //DELETE :commerceID/delete
+    func deleteCommerce(req: Request) async throws -> ModelResponse<Bool> {
+        guard let commerceID = req.parameters.get("commerceID", as: UUID.self) else { throw AbortDefault.parameterMiss("commerceID") }
+        
+        guard let commerce = try await Commerce.find(commerceID, on: req.db) else { throw AbortDefault.idNotExist(description: commerceID.uuidString) }
+        
+        try await commerce.delete(on: req.db)
+        
+        return .init(code: 200, description: "Success", body: true)
+    }
 }

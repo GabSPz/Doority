@@ -12,6 +12,10 @@ struct AccessController: RouteCollection {
     func boot(routes: Vapor.RoutesBuilder) throws {
         let accesses = routes.grouped("accesses")
         
+        accesses.post("validate", use: validateAccess)
+        accesses.post("add", use: addAccess)
+        accesses.put("update", use: updateAccess)
+        accesses.delete("delete", use: deleteAccess)
         
     }
     
@@ -70,5 +74,30 @@ struct AccessController: RouteCollection {
         
         return try .init(code: 200, description: "Success", body: accessDb.toPublic())
         
+    }
+    
+    //PUT accesses/update
+    func updateAccess(req: Request) async throws -> ModelResponse<Access.Public> {
+        let updateAccess = try req.content.decode(Access.Public.self)
+        
+        guard let accessDb: Access = try await Access.find(updateAccess.id, on: req.db) else { throw AbortDefault.idNotExist(description: updateAccess.id?.uuidString ?? "") }
+        
+        accessDb.type = updateAccess.type.rawValue
+        accessDb.value = updateAccess.value
+        
+        try await accessDb.update(on: req.db)
+        
+        return try .init(code: 200, description: "Success", body: accessDb.toPublic())
+    }
+    
+    //DELETE accesses/delete?access_id={}
+    func deleteAccess(req: Request) async throws -> ModelResponse<Bool> {
+        let access_id = try req.query.get(UUID.self, at: "access_id")
+        
+        guard let access = try await Access.find(access_id, on: req.db) else { throw AbortDefault.idNotExist(description: access_id.uuidString) }
+        
+        try await access.delete(on: req.db)
+        
+        return .init(code: 200, description: "Success", body: true)
     }
 }

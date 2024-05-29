@@ -18,7 +18,7 @@ struct AuthController: RouteCollection {
     
     //POST auth/register
     func registerNewUser(req: Request) async throws -> ModelResponse<String> {
-        let newUser: NewUserDTO = try req.content.decode(NewUserDTO.self)
+        let newUser: RegisterUserDTO = try req.content.decode(RegisterUserDTO.self)
         
         let token = try await req.db.transaction { db -> String in
             let commerce = Commerce(name: newUser.coommerce_name)

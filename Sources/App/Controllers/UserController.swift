@@ -10,17 +10,52 @@ import Fluent
 import JWT
 struct UserController: RouteCollection {
     func boot(routes: Vapor.RoutesBuilder) throws {
-        let users = routes.grouped("users")
+        let users = routes.grouped("users").grouped(AuthMiddleware())
         
         users.get("all", use: getAll)
         users.get("token", use: getUserByToken)
         users.put("update", use: updateUser)
-        users.group(":user_id") { user in
-            user.delete(use: deleteUser)
+        users.group(":userID") { user in
+            user.put("update", use: updateUser)
+            user.get("records", use: getUserRecords)
         }
-        
+        users.delete("delete", use: deleteUser)
+        users.post("add", use: addUser)
+
     }
     
+    //POST users/add
+    func addUser(req: Request) async throws -> ModelResponse<User.Public> {
+        let newUser: NewUserDTO = try req.content.decode(NewUserDTO.self)
+        
+        //Getting the user who is adding the newUser for permissions
+        guard let userAuth = try req.storage.get(UserStorage.self)?.wrapped?.toPublic() else { throw AbortDefault.valueNilFromServer(key: "request_storage_user") }
+        
+        if !newUser.role.isValid(from: userAuth.role) {
+            throw Abort(.unauthorized, reason: "El usuario '\(userAuth.name)' no esta autorizado para agregar un usuario de tipo '\(newUser.role.rawValue)'")
+        }
+        
+        let user: User = .init(name: newUser.name, last_name: newUser.last_name, mother_name: newUser.mother_name, start_time: newUser.start_time, end_time: newUser.end_time, role: newUser.role.rawValue, number_phone: newUser.number_phone, email: newUser.email, password: "", commerce: newUser.coommerce_id)
+        
+        try await user.save(on: req.db)
+        
+        return try .init(code: 200, description: "Success", body: user.toPublic())
+    }
+    
+    //GET users/:userID/records
+    func getUserRecords(req: Request) async throws -> ModelResponse<[Record.Public]> {
+        guard let userID: UUID = req.parameters.get("userID", as: UUID.self) else { throw AbortDefault.parameterMiss("user_id") }
+        
+        guard let user = try await User.query(on: req.db)
+            .filter(\.$id == userID)
+            .with(\.$records)
+            .first()
+        else { throw AbortDefault.idNotExist(description: userID.uuidString) }
+        
+        let publicRecords: [Record.Public] = try user.records.map{ try $0.toPublic() }
+        
+        return .init(code: 200, description: "Success", body: publicRecords)
+    }
     
     //GET users/all?commerce_id={}&branch_id={}&role={[]}
     func getAll(req: Request) async throws -> ModelResponse<[User.Public]> {
@@ -40,14 +75,14 @@ struct UserController: RouteCollection {
             return .init(code: 200, description: "Success", body: users)
         }
         
-        throw AbortDefault.badRequest("Parametros inválidos")
+        return .init(code: 200, description: "Success", body: try await User.query(on: req.db).all().compactMap { try $0.toPublic() })
     }
     
     //PUT users/edit
     func updateUser(req: Request) async throws -> ModelResponse<Bool> {
         let user = try req.content.decode(User.Public.self)
         
-        guard let userDb = try await User.find(user.id, on: req.db) else { throw AbortDefault.idNotExist(description: "El valor user_id proporcionado no existe") }
+        guard let userDb = try await User.find(user.id, on: req.db) else { throw AbortDefault.idNotExist(description: "El valor 'user_id' proporcionado no existe") }
         
         userDb.name = user.name
         userDb.last_name = user.last_name
@@ -64,7 +99,7 @@ struct UserController: RouteCollection {
     
     //DELETE users/:user_id
     func deleteUser(req: Request) async throws -> ModelResponse<Bool> {
-        let userID = req.parameters.get("user_id", as: UUID.self)
+        let userID = try req.query.get(UUID.self, at: "user_id")
         
         guard let userDb = try await User.find(userID, on: req.db) else { throw AbortDefault.idNotExist(description: "El valor user_id proporcionado no existe") }
         
