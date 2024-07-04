@@ -11,7 +11,7 @@ import Fluent
 struct RecordController: RouteCollection {
     func boot(routes: Vapor.RoutesBuilder) throws {
         
-        let records = routes.grouped("records")
+        let records = routes.grouped("records").grouped(AuthMiddleware())
         records.delete("delete", use: deleteRecord)
         records.put("update", use: updateRecord)
     }
@@ -20,7 +20,12 @@ struct RecordController: RouteCollection {
     func updateRecord(req: Request) async throws -> ModelResponse<Record.Public> {
         let updateRecord = try req.content.decode(Record.Public.self)
         
-        guard let record: Record = try await Record.find(updateRecord.id, on: req.db) else { throw AbortDefault.idNotExist(description: updateRecord.id.uuidString) }
+        guard let record: Record = try await Record.query(on: req.db)
+            .filter(\.$id == updateRecord.id)
+            .with(\.$user)
+            .with(\.$branch)
+            .first()
+        else { throw AbortDefault.idNotExist(description: updateRecord.id.uuidString) }
         
         record.access_datetime = updateRecord.access_datetime
         record.type = updateRecord.type.rawValue

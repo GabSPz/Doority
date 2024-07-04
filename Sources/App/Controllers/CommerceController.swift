@@ -10,7 +10,7 @@ import Fluent
 
 struct CommerceController: RouteCollection {
     func boot(routes: Vapor.RoutesBuilder) throws {
-        let commerces = routes.grouped("commerces")
+        let commerces = routes.grouped("commerces").grouped(AuthMiddleware())
         
         commerces.group(":commerceID") { commerce in
             commerce.put("update", use: updateCommerce)
@@ -18,9 +18,23 @@ struct CommerceController: RouteCollection {
                 branches.post("add", use: addBranch)
                 branches.get("all",use: getAllBranchesFromCommerce)
                 branches.get(use: getBranch)
+                branches.put("update", use: updateBranch)
+                branches.delete("delete", use: deleteBranch)
             }
             commerce.delete("delete", use: deleteCommerce)
+            commerce.get(use: getCommerce)
         }
+    }
+    
+    //GET commerces/:commerceID
+    func getCommerce(req: Request) async throws -> ModelResponse<Commerce.Public> {
+        guard let commerceID = req.parameters.get("commerceID", as: UUID.self) else { throw AbortDefault.parameterMiss("commerceID") }
+        
+        guard let commerce: Commerce = try await Commerce.find(commerceID, on: req.db) else {
+            throw AbortDefault.idNotExist(description: commerceID.uuidString)
+        }
+        
+        return try .init(code: 200, description: "Success", body: commerce.toPublic())
     }
     
     //PUT :commerceID/update
@@ -75,7 +89,7 @@ struct CommerceController: RouteCollection {
     }
     
     //PUT :commerceID/branches/update
-    func updateBranch(req: Request) async throws -> ModelResponse<Bool> {
+    func updateBranch(req: Request) async throws -> ModelResponse<Branch.Public> {
         let updateBranch = try req.content.decode(Branch.Public.self)
         
         guard let branchDB = try await Branch.find(updateBranch.id, on: req.db) else { throw AbortDefault.idNotExist(description: updateBranch.id?.description ?? "invalid") }
@@ -86,7 +100,7 @@ struct CommerceController: RouteCollection {
         
         try await branchDB.update(on: req.db)
         
-        return .init(code: 200, description: "Success", body: true )
+        return try .init(code: 200, description: "Success", body: branchDB.toPublic() )
     }
     
     //DELETE :commerceID/branches/delete?branch_id

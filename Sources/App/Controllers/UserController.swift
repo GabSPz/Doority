@@ -15,13 +15,27 @@ struct UserController: RouteCollection {
         users.get("all", use: getAll)
         users.get("token", use: getUserByToken)
         users.put("update", use: updateUser)
-        users.group(":userID") { user in
-            user.put("update", use: updateUser)
-            user.get("records", use: getUserRecords)
-        }
+        users.get("records", use: getUserRecords)
+
+        users.put("create-account", use: createUserAccount)
         users.delete("delete", use: deleteUser)
         users.post("add", use: addUser)
 
+    }
+    
+    ///PUT users/create-account?user_id={}&password={}
+    func createUserAccount(req: Request) async throws -> ModelResponse<Bool> {
+        let user_id: UUID = try req.query.get(UUID.self, at: "user_id")
+        let password = try req.query.get(String.self, at: "password")
+        
+        guard let user = try await User.find(user_id, on: req.db) else { throw AbortDefault.idNotExist(description: user_id.uuidString) }
+        
+        let passwordCryp = try Bcrypt.hash(password, cost: 10)
+        user.password = passwordCryp
+        
+        try await user.update(on: req.db)
+        
+        return .init(code: 200, description: "Success", body: true)
     }
     
     //POST users/add
@@ -29,9 +43,9 @@ struct UserController: RouteCollection {
         let newUser: NewUserDTO = try req.content.decode(NewUserDTO.self)
         
         //Getting the user who is adding the newUser for permissions
-        guard let userAuth = try req.storage.get(UserStorage.self)?.wrapped?.toPublic() else { throw AbortDefault.valueNilFromServer(key: "request_storage_user") }
+        guard let userAuth = req.storage.get(UserStorage.self)?.wrapped else { throw AbortDefault.valueNilFromServer(key: "request_storage_user") }
         
-        if !newUser.role.isValid(from: userAuth.role) {
+        if !newUser.role.isValid(from: .init(rawValue: userAuth.role) ?? .customer) {
             throw Abort(.unauthorized, reason: "El usuario '\(userAuth.name)' no esta autorizado para agregar un usuario de tipo '\(newUser.role.rawValue)'")
         }
         
@@ -42,13 +56,16 @@ struct UserController: RouteCollection {
         return try .init(code: 200, description: "Success", body: user.toPublic())
     }
     
-    //GET users/:userID/records
+    //GET users/records?user_id={}
     func getUserRecords(req: Request) async throws -> ModelResponse<[Record.Public]> {
-        guard let userID: UUID = req.parameters.get("userID", as: UUID.self) else { throw AbortDefault.parameterMiss("user_id") }
+        guard let userID: UUID = try req.query.get(UUID?.self, at: "user_id") else { throw AbortDefault.parameterMiss("user_id") }
         
         guard let user = try await User.query(on: req.db)
             .filter(\.$id == userID)
-            .with(\.$records)
+            .with(\.$records, {
+                $0.with(\.$user)
+                $0.with(\.$branch)
+            })
             .first()
         else { throw AbortDefault.idNotExist(description: userID.uuidString) }
         
@@ -75,12 +92,19 @@ struct UserController: RouteCollection {
             return .init(code: 200, description: "Success", body: users)
         }
         
-        return .init(code: 200, description: "Success", body: try await User.query(on: req.db).all().compactMap { try $0.toPublic() })
+        return .init(code: 200, description: "Success", body: try await User.query(on: req.db).with(\.$accesses).with(\.$branch).with(\.$records).all().compactMap { try $0.toPublic() })
     }
     
     //PUT users/edit
     func updateUser(req: Request) async throws -> ModelResponse<Bool> {
         let user = try req.content.decode(User.Public.self)
+        
+        //Getting the user who is adding the newUser for permissions
+        guard let userAuth = req.storage.get(UserStorage.self)?.wrapped else { throw AbortDefault.valueNilFromServer(key: "request_storage_user") }
+        
+        if !user.role.isValid(from: .init(rawValue: userAuth.role) ?? .customer) {
+            throw Abort(.unauthorized, reason: "El usuario '\(userAuth.name)' no esta autorizado para actualizar un usuario de tipo '\(user.role.rawValue)'")
+        }
         
         guard let userDb = try await User.find(user.id, on: req.db) else { throw AbortDefault.idNotExist(description: "El valor 'user_id' proporcionado no existe") }
         

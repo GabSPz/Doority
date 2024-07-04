@@ -28,6 +28,7 @@ public func configure(_ app: Application) async throws {
 
     // register routes
     try routes(app)
+    app.middleware.use(CustomErrorMiddleware())
 }
 
 //TypeAlias for app´s models

@@ -84,12 +84,10 @@ final class User: ModelContent {
     ///Only possible if relations Access, Commerce and Branch has been charged into User
     func toPublic() throws -> User.Public {
         //Validating
-        if let branch = $branch.wrappedValue, branch.$name.value == nil { throw AbortDefault.valueNilFromServer(key: "user_branch_name") }
-        if  self.$accesses.value == nil { throw AbortDefault.valueNilFromServer(key: "user_accesses") }
-        if self.$commerce.wrappedValue.$name.value == nil { throw AbortDefault.valueNilFromServer(key: "user_commerce") }
-        
+        if let branch = branch, $branch.value??.$name.value == nil { throw AbortDefault.valueNilFromServer(key: "user_branch_name") }
+            
         let id = try id.validModel()
-        let accesses: [Access.Public] = try accesses.map { try $0.toPublic() }
+        let accesses: [Access.Public] = self.$accesses.value == nil  ? [] : try accesses.map { try $0.toPublic() }
         var parentData: ParentDataDTO? {
             guard let branch = branch else { return nil }
             

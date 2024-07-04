@@ -51,8 +51,8 @@ final class Record: ModelContent {
     
     func toPublic() throws -> Record.Public {
         //Validations
-        if $user.wrappedValue.$name.value == nil { throw AbortDefault.valueNilFromServer(key: "record_user_name") }
-        if $branch.wrappedValue.$name.value == nil { throw AbortDefault.valueNilFromServer(key: "record_branch_name") }
+        if $user.value?.$name.value == nil { throw AbortDefault.valueNilFromServer(key: "record_user_name") }
+        if $branch.value?.$name.value == nil { throw AbortDefault.valueNilFromServer(key: "record_branch_name") }
 
         let id = try id.validModel()
         guard let accessDatetimeValidated = access_datetime else { throw AbortDefault.valueNilFromServer(key: "record_access_datetime") }
