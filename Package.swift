@@ -7,17 +7,14 @@ let package = Package(
        .macOS(.v13)
     ],
     dependencies: [
-        // 💧 A server-side Swift web framework.
-        .package(url: "https://github.com/vapor/vapor.git", from: "4.89.0"),
-        // 🗄 An ORM for SQL and NoSQL databases.
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.7.5"),
         .package(url: "https://github.com/vapor/fluent.git", from: "4.8.0"),
-        // 🐘 Fluent driver for Postgres.
-        .package(url: "https://github.com/vapor/fluent-postgres-driver.git", from: "2.7.2"),
+        .package(url: "https://github.com/vapor/fluent-postgres-driver.git", from: "2.0.0"),
         .package(url: "https://github.com/vapor/jwt.git", from: "4.0.0"),
 
     ],
     targets: [
-        .executableTarget(
+        .target(
             name: "App",
             dependencies: [
                 .product(name: "Fluent", package: "fluent"),
@@ -26,6 +23,7 @@ let package = Package(
                 .product(name: "JWT", package: "jwt"),
             ]
         ),
+        .executableTarget(name: "Run", dependencies: [.target(name: "App")]),
         .testTarget(name: "AppTests", dependencies: [
             .target(name: "App"),
             .product(name: "XCTVapor", package: "vapor"),
