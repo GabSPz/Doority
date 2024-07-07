@@ -17,4 +17,5 @@ struct RegisterUserDTO: Content {
     var email: String
     var password: String
     var coommerce_name: String
+    var register_token: String
 }
